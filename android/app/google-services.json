@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "298511285559",
+    "project_id": "cyclesafe-kids",
+    "storage_bucket": "cyclesafe-kids.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:298511285559:android:f62be6fb6768c0ed222eb2",
+        "android_client_info": {
+          "package_name": "com.example.cyclesafe_kids"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyANIZAZLe9IhJcZauQgZIMAIjxbDbMZtjE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

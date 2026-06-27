@@ -6,6 +6,10 @@ import 'package:geolocator/geolocator.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'dart:async';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() {
   runApp(const CycleSafeKidsApp());
@@ -592,26 +596,44 @@ SizedBox(height: 30),
             const SizedBox(height: 15),
 
             // My Location
-            buildButton(
-              Icons.location_on,
-              "My Location",
-              Colors.blue,
-              context,
-              () async {
-                await sendLocation();
+buildButton(
+  Icons.location_on,
+  "My Location",
+  Colors.blue,
+  context,
+  () async {
+    await sendLocation();
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(currentLocation),
-                  ),
-                );
-              },
-            ),
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(currentLocation),
+      ),
+    );
+  },
+),
 
-            const SizedBox(height: 15),
+const SizedBox(height: 15),
 
-            // Parent Dashboard
-            buildButton(
+// Bike Connection
+buildButton(
+  Icons.bluetooth,
+  "Bike Connection",
+  const Color.fromARGB(255, 104, 163, 211),
+  context,
+  () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const BikeConnectionScreen(),
+      ),
+    );
+  },
+),
+
+const SizedBox(height: 15),
+
+// Parent Dashboard
+buildButton(
               Icons.family_restroom,
               "Parent Dashboard",
               Colors.orange,
@@ -939,6 +961,7 @@ Card(
 );
   }
 }
+
 class RideHistoryScreen extends StatelessWidget {
   const RideHistoryScreen({super.key});
 
@@ -964,6 +987,273 @@ class RideHistoryScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class BikeConnectionScreen extends StatefulWidget {
+  const BikeConnectionScreen({super.key});
+
+  @override
+  State<BikeConnectionScreen> createState() =>
+      _BikeConnectionScreenState();
+}
+
+class _BikeConnectionScreenState
+    extends State<BikeConnectionScreen> {
+
+bool isScanning = false;
+
+String connectionStatus = "Disconnected";
+
+String bikeName = "No Bike Connected";
+
+String batteryLevel = "--%";
+
+String signalStrength = "--";
+
+String firmwareVersion = "--";
+
+List<ScanResult> scanResults = [];
+
+StreamSubscription<List<ScanResult>>? scanSubscription;
+
+Future<void> startScan() async {
+  print("Bluetooth Supported: ${await FlutterBluePlus.isSupported}");
+
+  BluetoothAdapterState state =
+      await FlutterBluePlus.adapterState.first;
+
+  print("Adapter State: $state");
+
+  if (state != BluetoothAdapterState.on) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Bluetooth is $state"),
+      ),
+    );
+    return;
+  }
+
+  // keep the rest of your existing startScan() code below here...
+
+  setState(() {
+    isScanning = true;
+    scanResults.clear();
+  });
+
+  try {
+    scanSubscription =
+    FlutterBluePlus.onScanResults.listen((results) {
+
+  debugPrint("Devices found: ${results.length}");
+
+  for (final r in results) {
+    debugPrint(
+      "${r.device.platformName} - ${r.device.remoteId.str}",
+    );
+  }
+
+  setState(() {
+    scanResults = results;
+  });
+});
+
+    await FlutterBluePlus.startScan(
+      timeout: const Duration(seconds: 5),
+    );
+    debugPrint("Scan started");
+
+    await Future.delayed(const Duration(seconds: 5));
+
+    await FlutterBluePlus.stopScan();
+  } catch (e, stackTrace) {
+  debugPrint("Bluetooth Error: $e");
+  debugPrintStack(stackTrace: stackTrace);
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text("Bluetooth error: $e"),
+    ),
+  );
+  } finally {
+    setState(() {
+      isScanning = false;
+    });
+  }
+}
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Bike Connection"),
+        backgroundColor: Colors.blue,
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+
+              const Icon(
+                Icons.bluetooth_connected,
+                size: 100,
+                color: Colors.blue,
+              ),
+
+              const SizedBox(height: 15),
+
+              const Text(
+                "ESP32 Bike Module",
+                style: TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              Card(
+                color: Colors.red.shade100,
+                child:  ListTile(
+                  leading: Icon(
+                    Icons.bluetooth_disabled,
+                    color: Colors.red,
+                  ),
+                  title: Text("Status"),
+                 subtitle: Text(connectionStatus),
+                ),
+              ),
+
+              const SizedBox(height: 15),
+
+               Card(
+                child: ListTile(
+                  leading: Icon(Icons.memory),
+                  title: Text("Device"),
+                  subtitle: Text(bikeName),
+                ),
+              ),
+
+              const Card(
+                child: ListTile(
+                  leading: Icon(Icons.battery_full),
+                  title: Text("Battery"),
+                  subtitle: Text("--%"),
+                ),
+              ),
+
+              const Card(
+                child: ListTile(
+                  leading: Icon(Icons.network_cell),
+                  title: Text("Signal"),
+                  subtitle: Text("--"),
+                ),
+              ),
+
+              const Card(
+                child: ListTile(
+                  leading: Icon(Icons.info),
+                  title: Text("Firmware"),
+                  subtitle: Text("--"),
+                ),
+              ),
+
+              const SizedBox(height: 30),
+
+              ElevatedButton.icon(
+  style: ElevatedButton.styleFrom(
+    backgroundColor: Colors.blue,
+    minimumSize: const Size(double.infinity, 70),
+  ),
+  
+  onPressed: isScanning
+      ? null
+      : () async {
+          await startScan();
+        },
+  icon: const Icon(Icons.search),
+  label: Text(
+    isScanning ? "Scanning..." : "Scan for Bike",
+    style: const TextStyle(fontSize: 22),
+  ),
+),
+const SizedBox(height: 20),
+
+if (scanResults.isEmpty)
+  const Text(
+    "No Bluetooth devices found",
+    style: TextStyle(color: Colors.grey),
+  ),
+  
+  Text(
+  "Devices found: ${scanResults.length}",
+  style: const TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+  ),
+),
+
+...scanResults.map(
+  (result) => Card(
+    child: ListTile(
+      leading: const Icon(Icons.bluetooth),
+
+      title: Text(
+        result.advertisementData.advName.isNotEmpty
+            ? result.advertisementData.advName
+            : "Unknown Device",
+      ),
+
+      subtitle: Text(result.device.remoteId.str),
+
+      trailing: const Icon(Icons.chevron_right),
+
+      onTap: () async {
+  try {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Connecting..."),
+        duration: Duration(seconds: 1),
+      ),
+    );
+
+    await FlutterBluePlus.stopScan();
+
+    await result.device.connect(
+      timeout: const Duration(seconds: 10),
+    );
+
+    setState(() {
+      connectionStatus = "Connected";
+
+      bikeName = result.advertisementData.advName.isNotEmpty
+          ? result.advertisementData.advName
+          : result.device.remoteId.str;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Connected to $bikeName"),
+      ),
+    );
+
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Connection failed: $e"),
+      ),
+    );
+  }
+},
+    ),
+  ),
+),
+            ],
+          ),
+        ),
       ),
     );
   }
